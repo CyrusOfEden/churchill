@@ -1,2 +1,0 @@
-defmodule Curchill do
-end

@@ -1,7 +1,10 @@
 defmodule CurchillTest do
   use ExUnit.Case
 
-  test "the truth" do
-    assert 1 + 1 == 2
+  @a Enum.to_list(1..1000)
+  @b Enum.shuffle(@a)
+
+  test "mergesort" do
+    assert Churchill.mergesort(@b) == @a
   end
 end

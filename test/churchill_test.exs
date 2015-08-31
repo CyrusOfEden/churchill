@@ -5,6 +5,6 @@ defmodule ChurchillTest do
   @b Enum.shuffle(@a)
 
   test "parallel map" do
-    assert Churchill.pmap(@a, &(&1 * &1)) == Enum.map(@a, &(&1 * &1))
+    assert Churchill.map(@a, &(&1 * &1)) == Enum.map(@a, &(&1 * &1))
   end
 end

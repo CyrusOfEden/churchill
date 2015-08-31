@@ -17,6 +17,13 @@ defmodule Churchill do
   def map(xs, fun, link \\ true, timeout \\ 5000, factor \\ @schedulers * 16)
   def map([], _, _, _, _), do: []
   def map(xs, fun, link, timeout, factor) do
+    do_map(xs, fun, link, factor)
+    |> List.foldr([], fn {:ok, pid}, results ->
+      receive do: ({^pid, result} -> [result|results]), after: (timeout -> results)
+    end)
+  end
+
+  defp do_map(xs, fun, link, factor) do
     master = self()
     perform = case link do
       true  -> &Task.start_link(&1)
@@ -26,21 +33,18 @@ defmodule Churchill do
     xs
     |> Enum.chunk(factor, factor, [])
     |> Enum.flat_map(fn chunk ->
-      Enum.map(chunk, fn item ->
-        perform.(fn ->
-          send(master, {self(), fun.(item)})
-        end)
-      end)
-    end)
-    |> List.foldr([], fn {:ok, pid}, results ->
-      receive do
-        {^pid, result} -> [result|results]
-      after
-        timeout -> results
-      end
+      Enum.map(chunk, &perform.(fn -> send(master, {self(), fun.(&1)}) end))
     end)
   end
-  defp process(false), do: &Task.start(&1)
+
+  def each(xs, fun, link \\ true, timeout \\ 5000, factor \\ @schedulers * 16)
+  def each([], _, _, _, _), do: []
+  def each(xs, fun, link, timeout, factor) do
+    do_map(xs, fun, link, factor)
+    |> Enum.each(fn {:ok, pid} ->
+      receive do: ({^pid, _} -> :ok), after: (timeout -> :error)
+    end)
+  end
 
   def sort(xs, factor \\ @schedulers)
   def sort(xs, 0), do: Enum.sort(xs)

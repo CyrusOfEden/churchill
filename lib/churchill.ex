@@ -11,12 +11,15 @@ defmodule Churchill do
 
   ## Examples
 
-      iex> Churchill.pmap(1..10, &(&1 + 5))
+      iex> Churchill.map(1..10, &(&1 + 5))
       [6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
   """
   def map(xs, fun, link \\ true, timeout \\ 5000, factor \\ @schedulers * 16)
   def map([], _, _, _, _), do: []
-  def map(xs, fun, link, timeout, factor) do
+  def map(xs, fun, link, timeout, factor) when is_list(xs)
+                                           and is_function(fun)
+                                           and is_boolean(link)
+                                           and is_integer(factor) do
     do_map(xs, fun, link, factor)
     |> List.foldr([], fn {:ok, pid}, results ->
       receive do: ({^pid, result} -> [result|results]), after: (timeout -> results)
@@ -39,7 +42,10 @@ defmodule Churchill do
 
   def each(xs, fun, link \\ true, timeout \\ 5000, factor \\ @schedulers * 16)
   def each([], _, _, _, _), do: []
-  def each(xs, fun, link, timeout, factor) do
+  def each(xs, fun, link, timeout, factor) when is_list(xs)
+                                            and is_function(fun)
+                                            and is_boolean(link)
+                                            and is_integer(factor) do
     do_map(xs, fun, link, factor)
     |> Enum.each(fn {:ok, pid} ->
       receive do: ({^pid, _} -> :ok), after: (timeout -> :error)
@@ -47,9 +53,10 @@ defmodule Churchill do
   end
 
   def sort(xs, factor \\ @schedulers)
-  def sort(xs, 0), do: Enum.sort(xs)
-  def sort(xs, _) when length(xs) <= 10_000, do: Enum.sort(xs)
-  def sort(xs, factor) when factor > 0 do
+  def sort(xs, factor) when factor <= 0 or length(xs) <= 10_000 do
+    Enum.sort(xs)
+  end
+  def sort(xs, factor) do
     {ls, rs} = split(xs)
     next_factor = max(factor - 2, 0)
 
